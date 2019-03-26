@@ -16,6 +16,7 @@
 # +
 import numpy as np
 import pandas as pd
+from pandas import Series,DataFrame
 import matplotlib.pylab as plt
 
 import os
@@ -243,7 +244,6 @@ df_m.info()
 
 df_m.to_csv('npb_batter_2014-2018_1.csv')
 
-from pandas import DataFrame, Series
 dframe1 = DataFrame(df_m['OPS2018'])
 dframe1.head()
 
@@ -321,5 +321,395 @@ sns.violinplot(y='RC272018',x='walks2018',data=df_m2.sort_values('On_base_percen
 # -
 
 sns.heatmap(DataFrame(df_m2.RC272018))
+
+df_m3 = pd.read_csv('npb_batter_2014-2018_2.csv')
+
+df_m3.head()
+
+df_m3.replace('日本ハム','Fighters')
+
+df_m3 = df_m3.replace('日本ハム','Fighters')
+
+df_m3 = df_m3.replace({'オリックス':'Orix','ヤクルト':'Yakult','中日':'Doragons','巨人':'Giants','阪神':'Tigers','広島':'Carp','楽天':'Rakuten','ソフトバンク':'Softbank','ロッテ':'Lotte','西武':'Lions'})
+
+df_m3.columns = df_m3.columns.str.replace('盗塁','steal')
+df_m3.head()
+
+# +
+namelist = []
+for index, row in df_m3.iterrows():
+#     print(type(row.player_name2018))
+    if(type(row.player_name2018) is str):
+        namelist.append(row.player_name2018)
+    else:
+        if(type(row.player_name2017) is str):
+            namelist.append(row.player_name2017)
+        else:
+            if(type(row.player_name2016) is str):
+                namelist.append(row.player_name2016)
+            else:
+                if(type(row.player_name2015) is str):
+                    namelist.append(row.player_name2015)
+                else:
+                    if(type(row.player_name2014) is str):
+                        namelist.append(row.player_name2014)
+                    else:
+                        namelist.append('')
+    
+#     row.player_name2018.isnull()
+#     print(index)
+#     print('~~~~~~')
+
+#     print(type(row))
+#     print(row)
+#     print('------')
+
+#     print('======\n')
+# -
+
+namelist = [i.replace('\u3000',' ') for i in namelist]
+
+namelist
+df_m3['player_name'] = DataFrame(namelist)
+
+df_m3.drop(['player_name2018','player_name2017','player_name2016','player_name2015','player_name2014'],axis=1,inplace=True)
+df_m3.head()
+
+#タイタニック参考
+df_m3.info()
+
+sns.countplot('team2018',data=df_m3)
+
+sns.countplot('team2017',data=df_m3)
+
+# df_m3.to_csv('npb_batter_2014-2018_3.csv')
+df_m3 = pd.read_csv('npb_batter_2014-2018_3.csv')
+
+df_m3.RC272018.hist(bins=70)
+
+df_m3.RC272018.mean()
+
+fig = sns.FacetGrid(df_m3,hue='team2018',aspect=4)
+fig.map(sns.kdeplot,'OPS2018',shade=True)
+maxest = df_m3['OPS2018'].max()
+fig.set(xlim=(0,maxest))
+fig.add_legend()
+
+#OPS2018 kdeplot
+fig = sns.FacetGrid(df_m3,hue='team2018',aspect=4)
+fig.map(sns.kdeplot,'OPS2018',shade=True)
+# maxest = df_m3['OPS2018'].max()
+fig.set(xlim=(0,2))
+fig.add_legend()
+
+#HRs kdeplot
+fig = sns.FacetGrid(df_m3,hue='team2018',aspect=4)
+fig.map(sns.kdeplot,'HRｓ2018',shade=True)
+maxest = df_m3['HRｓ2018'].max()
+fig.set(xlim=(0,maxest))
+fig.add_legend()
+
+#On_base_percentage2018 kdeplot
+fig = sns.FacetGrid(df_m3,hue='team2018',aspect=4)
+fig.map(sns.kdeplot,'On_base_percentage2018',shade=True)
+maxest = df_m3['On_base_percentage2018'].max()
+fig.set(xlim=(0,maxest))
+fig.add_legend()
+
+df_m3.groupby('team2018').OPS2018.mean()
+
+plt.plot(df_m3.groupby('team2018').OPS2018.mean())
+
+df_m3.head(1)
+
+sns.lmplot('batting_average2018','OPS2018',data=df_m3,palette='hls')
+
+sns.lmplot('batting_average2018','OPS2018',hue='team2018',data=df_m3,palette='hls')
+
+df_m3.head()
+
+Y_over3wari = []
+
+for index, row in df_m3.iterrows():
+    if(row.batting_average2018 > 0.3):
+        Y_over3wari.append(1)
+    else:
+        Y_over3wari.append(0)
+
+Y_over3wari = DataFrame(Y_over3wari)
+
+Y_over3wari
+
+#ロジスティック回帰参考
+df_logi2018 = df_m3.loc[:, df_m3.columns.str.endswith('2018')]
+
+df_logi2018.head()
+
+
+def check_over3wari(x):
+    if x>=0.3:
+        return 1
+    else:
+        return 0
+
+
+df_logi2018['over3wari'] = df_logi2018['batting_average2018'].apply(check_over3wari)
+
+df_logi2018 = pd.concat([df_logi2018,df_m3['player_name']],axis=1)
+
+df_logi2018
+
+#犠牲バントと打率３割超えか
+sns.countplot('sacrifice_bunt2018',data=df_logi2018.sort_values('sacrifice_bunt2018'),hue='over3wari',palette='coolwarm')
+
+#三振数と打率３割超えか
+sns.countplot('strike_out2018',data=df_logi2018.sort_values('strike_out2018'),hue='over3wari',palette='coolwarm')
+
+df_logi2018.groupby('over3wari').mean()
+
+#目的変数「Had_Affair」を削除します。
+X = df_logi2018.drop(['over3wari'],axis=1)
+
+Y = np.ravel(Y_over3wari)
+
+Y
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+log_model = LogisticRegression()
+
+X.head(1)
+
+team_dummier = pd.get_dummies(df_logi2018['team2018'])
+team_dummier.head()
+
+# X = X.drop('player_name',axis=1)
+X = pd.concat([X,team_dummier],axis=1)
+
+X = X.drop('team2018',axis=1)
+X.head()
+
+X = X.drop('batting_average2018',axis=1)
+X.head()
+
+test = X.dropna()
+
+X.info()
+
+test.info()
+
+test2018 = df_logi2018.dropna()
+
+test2018.head()
+
+team_dummies = pd.get_dummies(df_logi2018.dropna()['team2018'])
+
+X = test2018.drop(['player_name','team2018','over3wari'],axis=1)
+
+X.columns
+
+X.info()
+
+Y = df_logi2018.dropna()['over3wari']
+
+Y =Y.values
+
+# +
+# X = pd.concat([X,team_dummies],axis=1)
+# X.info()
+# -
+
+X.info()
+
+team_dummies.info()
+
+X.shape
+
+Y.shape
+
+log_model.fit(X,Y)
+
+log_model.score(X,Y)
+
+Y.mean()
+
+coeff_df = DataFrame([X.columns, log_model.coef_[0]]).T
+coeff_df.columns=['col1','col2']
+coeff_df
+
+coeff_df.plot(x='col1',y='col2',kind='bar')
+
+#打率と打率３割超えか→係数高くない笑
+sns.countplot('batting_average2018',data=df_logi2018.sort_values('batting_average2018'),hue='over3wari',palette='coolwarm')
+
+# +
+# おなじく、train_test_splitを使います。
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y)
+
+# 新しいモデルを作ります。
+log_model2 = LogisticRegression()
+
+# 学習用のデータだけでモデルを鍛えます。
+log_model2.fit(X_train, Y_train)
+
+# +
+# テスト用データを使って、予測してみましょう。
+class_predict = log_model2.predict(X_test)
+
+# もう一つ、性能の評価用に
+from sklearn import metrics
+
+# 精度を計算してみます。
+print(metrics.accuracy_score(Y_test,class_predict))
+# -
+
+X_drophits = X.drop(['hits2018'],axis=1)
+
+log_model3_drophits = LogisticRegression()
+
+log_model3_drophits.fit(X_drophits,Y)
+
+log_model3_drophits.score(X_drophits,Y)
+
+# +
+# おなじく、train_test_splitを使います。
+X_train, X_test, Y_train, Y_test = train_test_split(X_drophits, Y)
+
+# 新しいモデルを作ります。
+log_model_dh = LogisticRegression()
+
+# 学習用のデータだけでモデルを鍛えます。
+log_model_dh.fit(X_train, Y_train)
+
+# +
+# テスト用データを使って、予測してみましょう。
+class_predict = log_model_dh.predict(X_test)
+
+# 精度を計算してみます。
+print(metrics.accuracy_score(Y_test,class_predict))
+# -
+
+X.head(1)
+
+# 打席数１００以上で
+
+X_over100daseki = X[X['plate_appearances2018']>100]
+X_over100daseki.info()
+
+X_over100daseki.plate_appearances2018.mean()
+
+X_over100daseki.shape
+
+Y_over100daseki = df_logi2018.dropna()[df_logi2018['plate_appearances2018']>100]['over3wari']
+
+Y_over100daseki.head()
+
+Y_over100daseki.shape
+
+type(Y_over100daseki)
+
+Y_over100daseki = np.ravel(Y_over100daseki)
+Y_over100daseki
+
+log_model_over100daseki = LogisticRegression()
+
+log_model_over100daseki.fit(X_over100daseki,Y_over100daseki)
+
+log_model_over100daseki.score(X_over100daseki,Y_over100daseki)
+
+Y_over100daseki.mean()
+
+coeff_df_over100daseki = DataFrame([X_over100daseki.columns,log_model_over100daseki.coef_[0]]).T
+coeff_df_over100daseki.columns=['col1','col2']
+coeff_df_over100daseki
+
+coeff_df_over100daseki.plot(x='col1',y='col2',kind='bar')
+
+# drop hits2018
+
+X_over100daseki_dh = X_over100daseki.drop('hits2018',axis=1)
+X_over100daseki_dh.head(1)
+
+log_model_over100daseki_dh = LogisticRegression()
+
+log_model_over100daseki_dh.fit(X_over100daseki_dh,Y_over100daseki)
+
+log_model_over100daseki_dh.score(X_over100daseki_dh,Y_over100daseki)
+
+coeff_df_over100daseki_dh = DataFrame([X_over100daseki_dh.columns,log_model_over100daseki_dh.coef_[0]]).T
+coeff_df_over100daseki_dh.columns = ['col1','col2']
+coeff_df_over100daseki_dh
+
+coeff_df_over100daseki_dh.plot(x='col1',y='col2',kind='bar')
+
+X_over100daseki_dh_drcxr = X_over100daseki_dh.drop(['RC272018','XR272018'],axis=1)
+
+log_model_over100daseki_dh_drcxr = LogisticRegression()
+
+log_model_over100daseki_dh_drcxr.fit(X_over100daseki_dh_drcxr,Y_over100daseki)
+
+log_model_over100daseki_dh_drcxr.score(X_over100daseki_dh_drcxr,Y_over100daseki)
+
+coeff_df_over100daseki_dh_drcxr = DataFrame([X_over100daseki_dh_drcxr.columns,log_model_over100daseki_dh_drcxr.coef_[0]]).T
+coeff_df_over100daseki_dh_drcxr.columns = ['col1','col2']
+coeff_df_over100daseki_dh_drcxr
+
+coeff_df_over100daseki_dh_drcxr.plot(x='col1',y='col2',kind='bar')
+
+# 打率が関係するのは消す
+
+X_over100daseki_dh_drcxr_andmore = X_over100daseki_dh_drcxr.drop(['rank2018','batting_average2018','Slugging_percentage2018','OPS2018','On_base_percentage2018'],axis=1)
+
+X_over100daseki_dh_drcxr_andmore.head()
+
+log_model_over100daseki_dh_drcxr_andmore = LogisticRegression()
+
+log_model_over100daseki_dh_drcxr_andmore.fit(X_over100daseki_dh_drcxr_andmore,Y_over100daseki)
+
+log_model_over100daseki_dh_drcxr_andmore.score(X_over100daseki_dh_drcxr_andmore,Y_over100daseki)
+
+coeff_df_over100daseki_dh_drcxr_andmore = DataFrame([X_over100daseki_dh_drcxr_andmore.columns,log_model_over100daseki_dh_drcxr_andmore.coef_[0]]).T
+
+coeff_df_over100daseki_dh_drcxr_andmore.columns = ['col1','col2']
+coeff_df_over100daseki_dh_drcxr_andmore
+
+coeff_df_over100daseki_dh_drcxr_andmore.plot(x='col1',y='col2',kind='bar')
+
+# +
+# おなじく、train_test_splitを使います。
+X_train, X_test, Y_train, Y_test = train_test_split(X_over100daseki_dh_drcxr_andmore, Y_over100daseki)
+
+# 新しいモデルを作ります。
+log_model_over100daseki_dh_drcxr_andmore_split = LogisticRegression()
+
+# 学習用のデータだけでモデルを鍛えます。
+log_model_over100daseki_dh_drcxr_andmore_split.fit(X_train, Y_train)
+
+# +
+# テスト用データを使って、予測してみましょう。
+class_predict = log_model_over100daseki_dh_drcxr_andmore_split.predict(X_test)
+
+# 精度を計算してみます。
+print(metrics.accuracy_score(Y_test,class_predict))
+# -
+
+# 適合率、再現率
+
+# +
+from sklearn.metrics import precision_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import recall_score, f1_score
+
+y_true = [0,0,0,1,1,1]
+y_pred = [1,0,0,1,1,1]
+confmat = confusion_matrix(y_true, y_pred, labels=[1, 0])
+
+print (confmat)
+
+precision = precision_score(y_true, y_pred)
+recall = recall_score(y_true, y_pred)
+print(precision)
+print(recall)
+# -
 
 
